@@ -80,6 +80,14 @@ class TransactionRepository:
                 return True
         return False
 
+    def count_by_category(self, category_name: str) -> int:
+        """해당 카테고리를 사용하는 거래 건수 집계 (삭제 전 영향도 사전 파악용)"""
+        count = 0
+        for item in self.storage.stream_items(TRANSACTIONS_FILE):
+            if str(item.get("category", "")).lower() == category_name.lower():
+                count += 1
+        return count
+
     def replace_category(self, old_category: str, new_category: str) -> int:
         """카테고리 삭제 시 대체 카테고리로 일괄 업데이트"""
         count = 0

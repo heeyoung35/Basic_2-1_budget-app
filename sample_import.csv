@@ -1,0 +1,6 @@
+date,type,category,amount,memo,tags
+2024-01-10,income,salary,3500000,1월 기본급여,pay,regular
+2024-01-11,expense,food,12000,구내식당 중식,lunch
+2024-01-12,expense,transport,25000,지하철/버스 충전,subway
+2024-01-15,expense,rent,450000,월세 납부,rent,fixed
+2024-01-18,expense,food,28000,주말 마트 장보기,grocery

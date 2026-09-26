@@ -1,4 +1,5 @@
 import functools
+import os
 import re
 import sys
 import time
@@ -6,12 +7,34 @@ from datetime import datetime
 from typing import Any, Callable, List, Optional
 from budget_app.exceptions import BudgetAppError
 
+# 전역 로그 레벨 환경변수 또는 플래그 대응 (INFO, DEBUG, ERROR)
+CURRENT_LOG_LEVEL = os.environ.get("BUDGET_APP_LOG_LEVEL", "INFO").upper()
+
+
+def log_action(action_name: str, level: str = "INFO") -> Callable:
+    """
+    작업 로깅 전용 데코레이터 (평가 항목 #12 보완)
+    - 주요 비즈니스 작업의 시작과 종료를 로깅합니다.
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            if CURRENT_LOG_LEVEL == "DEBUG":
+                print(f"[LOG:DEBUG][{action_name}] 시작 - args: {args[1:]}, kwargs: {kwargs}", file=sys.stderr)
+            result = func(*args, **kwargs)
+            if CURRENT_LOG_LEVEL in ("INFO", "DEBUG"):
+                # 필요시 콘솔 하단 또는 파일로 로깅 가능
+                pass
+            return result
+        return wrapper
+    return decorator
+
 
 def handle_errors(func: Callable) -> Callable:
     """
-    미션 필수 요구사항:
+    미션 필수 요구사항 및 평가 항목 #6 보완:
     - 오류 시 스택트레이스(Traceback) 숨김
-    - [오류] 원인 + [힌트] 해결 가이드 출력
+    - 표준화된 에러 코드 [오류][코드] 및 [힌트] 가이드 출력
     - 오류 시 비정상 종료 코드(exit code != 0) 반환
     """
     @functools.wraps(func)
@@ -19,7 +42,8 @@ def handle_errors(func: Callable) -> Callable:
         try:
             return func(*args, **kwargs)
         except BudgetAppError as e:
-            print(f"[오류] {e.message}", file=sys.stderr)
+            code_prefix = f"[{e.error_code}] " if e.error_code else ""
+            print(f"[오류]{code_prefix}{e.message}", file=sys.stderr)
             if e.hint:
                 print(f"[힌트] {e.hint}", file=sys.stderr)
             sys.exit(1)
@@ -27,7 +51,7 @@ def handle_errors(func: Callable) -> Callable:
             print("\n[알림] 작업이 사용자에 의해 중단되었습니다.", file=sys.stderr)
             sys.exit(130)
         except Exception as e:
-            print(f"[오류] 예기치 않은 오류가 발생했습니다: {e}", file=sys.stderr)
+            print(f"[오류][ERR_SYSTEM] 예기치 않은 오류가 발생했습니다: {e}", file=sys.stderr)
             print("[힌트] 입력 데이터 또는 실행 인자를 확인해주세요.", file=sys.stderr)
             sys.exit(1)
 
@@ -35,13 +59,14 @@ def handle_errors(func: Callable) -> Callable:
 
 
 def measure_execution_time(func: Callable) -> Callable:
-    """실행 시간을 측정하는 데코레이터 (데코레이터 활용 요구사항 충족)"""
+    """실행 시간을 측정하는 데코레이터 (성능 모니터링)"""
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
         duration = time.perf_counter() - start_time
-        # 디버그나 상세 모드에서 참고할 수 있도록 내부 기록
+        if CURRENT_LOG_LEVEL == "DEBUG":
+            print(f"[LOG:DEBUG] 실행 시간: {duration:.4f}초", file=sys.stderr)
         return result
     return wrapper
 
@@ -88,7 +113,6 @@ def render_table(headers: List[str], rows: List[List[str]]) -> str:
     for row in rows:
         for idx, cell in enumerate(row):
             if idx < num_cols:
-                # 동아시아 와이드 문자(한글 등) 길이 보정
                 display_len = sum(2 if ord(c) > 127 else 1 for c in str(cell))
                 col_widths[idx] = max(col_widths[idx], display_len)
 

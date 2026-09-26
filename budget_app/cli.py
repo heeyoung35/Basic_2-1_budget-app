@@ -123,7 +123,8 @@ def handle_search(service: BudgetService, args: argparse.Namespace) -> None:
 # 4. 월별 요약 (summary)
 # ----------------------------------------------------
 def handle_summary(service: BudgetService, args: argparse.Namespace) -> None:
-    result = service.get_monthly_summary(month=args.month, top_n=args.top)
+    threshold = getattr(args, "warning_threshold", 80.0)
+    result = service.get_monthly_summary(month=args.month, top_n=args.top, warning_threshold=threshold)
 
     if not result.get("has_data"):
         print(f"[{args.month}] 데이터 없음")
@@ -137,8 +138,8 @@ def handle_summary(service: BudgetService, args: argparse.Namespace) -> None:
     if budget_info:
         usage = budget_info["usage_rate"]
         print(f"예산: {budget_info['amount']}원 (사용률 {usage:.1f}%)")
-        if budget_info["is_exceeded"]:
-            print(f"⚠️  [경고] 예산을 {budget_info['excess_amount']}원 초과했습니다!")
+        if budget_info.get("alert_message"):
+            print(budget_info["alert_message"])
     else:
         print("예산: 미설정 ('budget set' 명령으로 설정 가능)")
 
@@ -264,8 +265,15 @@ def handle_delete(service: BudgetService, args: argparse.Namespace) -> None:
 # 9. 가져오기 / 내보내기 (import / export)
 # ----------------------------------------------------
 def handle_import(service: BudgetService, args: argparse.Namespace) -> None:
-    imported, skipped = service.import_csv(args.from_file)
+    strict_mode = getattr(args, "strict", False)
+    imported, skipped, error_logs = service.import_csv(args.from_file, strict=strict_mode)
     print(f"[완료] imported={imported}, skipped={skipped}")
+    if error_logs:
+        print("[건너뛴 오류 행 목록]")
+        for err in error_logs[:10]:
+            print(f"  - {err}")
+        if len(error_logs) > 10:
+            print(f"  ... 외 {len(error_logs) - 10}건 생략")
 
 
 def handle_export(service: BudgetService, args: argparse.Namespace) -> None:
@@ -299,6 +307,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_DATA_DIR,
         help="데이터 저장소 디렉터리 경로 (기본값: ./data)",
     )
+    parser.add_argument(
+        "-log-level", "--log-level",
+        choices=["INFO", "DEBUG", "ERROR"],
+        default="INFO",
+        help="로그 레벨 제어 (기본값: INFO)",
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="사용 가능한 명령어 목록")
 
@@ -322,6 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
     summary_p = subparsers.add_parser("summary", help="월별 수입/지출/예산 요약 통계")
     summary_p.add_argument("-month", "--month", required=True, help="조회할 월 (YYYY-MM)")
     summary_p.add_argument("-top", "--top", type=int, default=3, help="지출 상위 카테고리 개수 (기본값: 3)")
+    summary_p.add_argument("-warning-threshold", "--warning-threshold", type=float, default=80.0, help="예산 주의 알림 임계값 (%) (기본값: 80.0)")
 
     # 5. budget
     budget_p = subparsers.add_parser("budget", help="월별 예산 설정 및 조회")
@@ -359,6 +374,7 @@ def build_parser() -> argparse.ArgumentParser:
     # 9. import / export
     import_p = subparsers.add_parser("import", help="CSV 파일에서 거래 일괄 등록")
     import_p.add_argument("-from", "--from", dest="from_file", required=True, help="가져올 CSV 파일 경로")
+    import_p.add_argument("-strict", "--strict", action="store_true", help="오류 행 발생 시 전체 롤백(All-or-Nothing) 모드")
 
     export_p = subparsers.add_parser("export", help="조건에 맞는 거래를 CSV로 내보내기")
     export_p.add_argument("-out", "--out", required=True, help="출력할 CSV 파일 경로")
