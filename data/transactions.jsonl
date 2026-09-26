@@ -1,0 +1,8 @@
+{"id": "TX-000001", "type": "expense", "date": "2024-01-15", "amount": 18000, "category": "shopping", "memo": "점심(수정)", "tags": ["meal"]}
+{"id": "TX-000002", "type": "income", "date": "2024-01-14", "amount": 3000000, "category": "salary", "memo": "??", "tags": ["pay"]}
+{"id": "TX-000003", "type": "expense", "date": "2024-01-12", "amount": 150000, "category": "rent", "memo": "??", "tags": ["fixed"]}
+{"id": "TX-000004", "type": "expense", "date": "2024-01-12", "amount": 20000, "category": "transport", "memo": "???", "tags": ["bus"]}
+{"id": "TX-000005", "type": "expense", "date": "2024-01-12", "amount": 20000, "category": "transport", "memo": "???", "tags": ["bus"]}
+{"id": "TX-000005", "type": "expense", "date": "2024-01-12", "amount": 150000, "category": "rent", "memo": "??", "tags": ["fixed"]}
+{"id": "TX-000005", "type": "income", "date": "2024-01-14", "amount": 3000000, "category": "salary", "memo": "??", "tags": ["pay"]}
+{"id": "TX-000005", "type": "expense", "date": "2024-01-15", "amount": 18000, "category": "shopping", "memo": "점심(수정)", "tags": ["meal"]}
