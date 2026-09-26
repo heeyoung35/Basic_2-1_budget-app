@@ -28,6 +28,10 @@ class BudgetService:
         self.budget_repo = budget_repo
         self.data_dir = Path(data_dir)
 
+    def validate_date_input(self, date_str: str) -> str:
+        """날짜 유효성 검사 헬퍼"""
+        return validate_date(date_str)
+
     # ----------------------------------------------------
     # 1. 거래 추가 (Add)
     # ----------------------------------------------------
